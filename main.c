@@ -1,57 +1,10 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
 #include <stdio.h>
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
 TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart1;
-
-HCD_HandleTypeDef hhcd_USB_DRD_FS;
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -62,97 +15,63 @@ static void MX_USART1_UART_Init(void);
 static void MX_USB_DRD_FS_HCD_Init(void);
 static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
-void SetPin_Out();
-void SetPin_In();
-int Sensor_Initialize();
-void udelay(uint32_t us);
-uint8_t read();
+void SetPin_Out();						// Function to set GPIO Pin as Output
+void SetPin_In();						// Function to set GPIO Pin as Input
+int Sensor_Initialize();					// Function to Initialize DHT11 Sensor
+void udelay(uint32_t us);					// Function to create delay in microseconds
+uint8_t read();							// Function to read Temperature and Humidity values
 /* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t timCnt1=0;
+// User Variable Declarations
+uint8_t timCnt1=0;						// Variable to count microseconds delay
 uint8_t timCnt2=0;
-uint8_t intRH;
-uint8_t decRH;
-uint8_t intT;
-uint8_t decT;
-uint8_t Checksum;
-char temp[32];
-char Humi[32];
+uint8_t intRH;							// Variable to store integer part of Temperature value
+uint8_t decRH;							// Variable to store decimal part of Temperature value
+uint8_t intT;							// Variable to store integer part of Humidity value
+uint8_t decT;							// Variable to store decimal part of Humidity value
+uint8_t Checksum;						// Variable to store Checksum value
+char temp[32];							// Variable to display Temperature value though UART
+char Humi[32];							// Variable to display Humidity value though UART
+char error[32];
 /* USER CODE END 0 */
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
-
-  /* Configure the System Power */
   SystemPower_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ICACHE_Init();
   MX_USART1_UART_Init();
-  MX_USB_DRD_FS_HCD_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(&htim6);
-  int Ret = Sensor_Initialize();
-  /* USER CODE END 2 */
+  HAL_TIM_Base_Start(&htim6);						// Initialise timer for microsecond delay
+
+while(1){
+int Ret = Sensor_Initialize();						// Initialization of sensor returns 1	
 if(Ret==1)
 {
-
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
-	  intRH = read();
-	  decRH = read();
-	  intT = read();
-	  decT = read();
-	  Checksum= read();
-//	  float Temperature = (float)intT+(float)(decT/10);
-//	  float Humidity = (float)intRH+(float)(decRH/10);
-	  sprintf(temp, "Temperature = %d.%d\n\r ", intT,decT);
-	  sprintf(Humi, "Humidity = %d.%d\n\r ", intRH,decRH);
-	  HAL_UART_Transmit(&huart1, (uint8_t*)temp, sizeof(temp), 10);
-	  HAL_UART_Transmit(&huart1, (uint8_t*)Humi, sizeof(Humi), 10);
-	  HAL_Delay(3000);
-	 Sensor_Initialize();
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+  intRH = read();							// Read Integer value of Humidity
+  decRH = read();							// Read Decimal value of Humidity
+  intT = read();							// Read Integer value of Temperature
+  decT = read();							// Raed Decimal value of Temperature
+  Checksum= read();							// Read Checksum value
+  sprintf(temp, "Temperature = %d.%d\n\r ", intT,decT);			
+  sprintf(Humi, "Humidity = %d.%d\n\r ", intRH,decRH);			
+  HAL_UART_Transmit(&huart1, (uint8_t*)temp, sizeof(temp), 10);		// Display Temperature value
+  HAL_UART_Transmit(&huart1, (uint8_t*)Humi, sizeof(Humi), 10);		// Display Humidity Value
+  HAL_Delay(3000);							// Delay of 3 seconds before reading the values again
+}
+else{
+	sprintf(error, "Sensor Initialization Failed\n\r ");		
+	HAL_UART_Transmit(&huart1, (uint8_t*)error, sizeof(error), 10);		// Print error message
+}
 }
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -204,10 +123,6 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief Power Configuration
-  * @retval None
-  */
 static void SystemPower_Config(void)
 {
 
@@ -222,11 +137,6 @@ static void SystemPower_Config(void)
 /* USER CODE END PWR */
 }
 
-/**
-  * @brief ICACHE Initialization Function
-  * @param None
-  * @retval None
-  */
 static void MX_ICACHE_Init(void)
 {
 
@@ -292,11 +202,6 @@ static void MX_TIM6_Init(void)
 
 }
 
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
 static void MX_USART1_UART_Init(void)
 {
 
@@ -340,46 +245,6 @@ static void MX_USART1_UART_Init(void)
 
 }
 
-/**
-  * @brief USB_DRD_FS Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USB_DRD_FS_HCD_Init(void)
-{
-
-  /* USER CODE BEGIN USB_DRD_FS_Init 0 */
-
-  /* USER CODE END USB_DRD_FS_Init 0 */
-
-  /* USER CODE BEGIN USB_DRD_FS_Init 1 */
-
-  /* USER CODE END USB_DRD_FS_Init 1 */
-  hhcd_USB_DRD_FS.Instance = USB_DRD_FS;
-  hhcd_USB_DRD_FS.Init.dev_endpoints = 8;
-  hhcd_USB_DRD_FS.Init.Host_channels = 8;
-  hhcd_USB_DRD_FS.Init.speed = HCD_SPEED_FULL;
-  hhcd_USB_DRD_FS.Init.phy_itface = HCD_PHY_EMBEDDED;
-  hhcd_USB_DRD_FS.Init.Sof_enable = DISABLE;
-  hhcd_USB_DRD_FS.Init.low_power_enable = DISABLE;
-  hhcd_USB_DRD_FS.Init.vbus_sensing_enable = DISABLE;
-  hhcd_USB_DRD_FS.Init.bulk_doublebuffer_enable = DISABLE;
-  hhcd_USB_DRD_FS.Init.iso_singlebuffer_enable = DISABLE;
-  if (HAL_HCD_Init(&hhcd_USB_DRD_FS) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USB_DRD_FS_Init 2 */
-
-  /* USER CODE END USB_DRD_FS_Init 2 */
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -419,6 +284,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//Sensor Functions start here
+
 void udelay(uint32_t us){
 __HAL_TIM_SET_COUNTER(&htim6,0);
 while((__HAL_TIM_GET_COUNTER(&htim6))<us){}
@@ -426,67 +293,67 @@ while((__HAL_TIM_GET_COUNTER(&htim6))<us){}
 
 int Sensor_Initialize(){
 	int Response=0;
-	SetPin_In();
+	SetPin_In();							// Set GPIO pin Input
 	HAL_Delay(100);
-	SetPin_Out();
-	HAL_GPIO_WritePin(DHT11_GPIO_Port, DHT11_Pin,0);
+	SetPin_Out();							// Set GPIO Pin Output
+	HAL_GPIO_WritePin(DHT11_GPIO_Port, DHT11_Pin,0);		// Set pin low for 18 milliseconds
 	HAL_Delay(18);
-	HAL_GPIO_WritePin(DHT11_GPIO_Port, DHT11_Pin,1);
+	HAL_GPIO_WritePin(DHT11_GPIO_Port, DHT11_Pin,1);		// Set pin high for 40 microseconds
 	udelay(40);
-	SetPin_In();
+	SetPin_In();							// Set GPIO pin Input
 	__HAL_TIM_SET_COUNTER(&htim6,0);
 	timCnt1=__HAL_TIM_GET_COUNTER(&htim6);
-	while(!(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin)))
+	while(!(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin)))		// Check if the GPIO pin is low for a maximum of 80 microseconds
 		timCnt2=__HAL_TIM_GET_COUNTER(&htim6);
 	if(timCnt2-timCnt1<=80){
 		__HAL_TIM_SET_COUNTER(&htim6,0);
 		timCnt1=__HAL_TIM_GET_COUNTER(&htim6);
-		while(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin))
+		while(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin))	// Check if the Gpio pin is high for a maximum of 80 microseconds
 			timCnt2=__HAL_TIM_GET_COUNTER(&htim6);
 		if(timCnt2-timCnt1<=80)
-			Response =1;
+			Response =1;					// if the conditions are true then sensor initialization was a success
 		else
-			Response=-1;
+			Response=-1;					// else sensor initialization failed
 	}
 	else
 		Response = -1;
-	return Response;
+	return Response;						// Return response
 }
 
-uint8_t read(){
+uint8_t read(){								// Function to read values from sensor
 	uint8_t data={0};
-	SetPin_In();
+	SetPin_In();							// Set pin Input
 	for(int i=0;i<8;i++){
 		__HAL_TIM_SET_COUNTER(&htim6,0);
 		timCnt1=__HAL_TIM_GET_COUNTER(&htim6);
-		while(!(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin)))
+		while(!(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin)))	// if the sensor holds pin low for a maximum of 50 microseconds then it means sensor is ready to transmit
 			timCnt2=__HAL_TIM_GET_COUNTER(&htim6);
 		if(timCnt2-timCnt1<=50)
 		{
 			__HAL_TIM_SET_COUNTER(&htim6,0);
 			timCnt1=__HAL_TIM_GET_COUNTER(&htim6);
-			while(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin))
+			while(HAL_GPIO_ReadPin(DHT11_GPIO_Port, DHT11_Pin))	// if the sensor holds pin high for a maximum of 28 microseconds then it means it is transmitting 0
 				timCnt2=__HAL_TIM_GET_COUNTER(&htim6);
 			if(timCnt2-timCnt1<=28)
 				data|=(0<<(7-i));
-			else if (timCnt2-timCnt1>28 && timCnt2-timCnt1<=80)
+			else if (timCnt2-timCnt1>28 && timCnt2-timCnt1<=80)	// if the sensor holds pin high for a maximum of 80 microseconds then it means it is transmitting 1
 				data|=(1<<(7-i));
 			else
-				Error_Handler();
+				Error_Handler();				// else there is an error in transmitting
 		}
 	}
-	return data;
+	return data;							
 }
 
 
-void SetPin_In(){
+void SetPin_In(){								// Function to set GPIO pin Input
 GPIO_InitTypeDef GPIO_InitStruct = {0};
   GPIO_InitStruct.Pin = DHT11_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(DHT11_GPIO_Port, &GPIO_InitStruct);
   }
-void SetPin_Out(){
+void SetPin_Out(){								// Function to set GPIO pin Output
 GPIO_InitTypeDef GPIO_InitStruct = {0};
  GPIO_InitStruct.Pin = DHT11_Pin;
  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -496,10 +363,6 @@ GPIO_InitTypeDef GPIO_InitStruct = {0};
  }
 /* USER CODE END 4 */
 
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
